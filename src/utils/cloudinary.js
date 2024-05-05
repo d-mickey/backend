@@ -16,12 +16,14 @@ const uploadOnCloudinary = async function (localFilePath) {
         }
         // upload file on cloudinary
         const resonse = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: "auto"
+            resource_type: "auto" // detect automatically type of file
         })
         // file uploaded
+        alert("File uploaded Successfully !");
         return resonse;
     } catch (error) {
-        fs.unlinkSync(localFilePath) // remove the locally saved temporary file as the upload failed
+        // remove the locally saved temporary file as the upload failed
+        fs.unlinkSync(localFilePath) 
         return null;
     }
 }
