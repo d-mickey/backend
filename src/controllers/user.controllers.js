@@ -6,6 +6,24 @@ import { apiError } from "../utils/apiError.js";
 
 
 
+// generate token
+const generateToken = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+        const accessToken = generateAccessToken()
+
+        return accessToken
+
+    } catch (error) {
+        throw new apiError(500, " Something went wrong while generating access token.")
+    }
+}
+
+
+
+
+
+// user registration
 const registerUser = asyncHandler( async (req, res) => {
     // get user details form frontend / postman
     const {username, email, fullname, password} = req.body
@@ -57,7 +75,7 @@ const registerUser = asyncHandler( async (req, res) => {
 
     // check for user creation and remove password and refresh token form response
     const newUser = await User.findById(user._id).select(
-        "-password -refreshToken"
+        "-password"
     )
 
     if (!newUser) {
@@ -71,4 +89,102 @@ const registerUser = asyncHandler( async (req, res) => {
 
 } )
 
-export {registerUser}
+
+
+
+
+// user login
+const loginUser = asyncHandler( async (req, res) => {
+
+    // get user details form frontend / postman
+    const {username, email, password} = req.body
+
+    if (!username || !email) {
+        throw new apiError(400, "All fields are required.")
+    }
+
+    // find user with provided email or uasername
+    const user = await User.findOne({
+            $or: [{username}, {email}]
+    })
+
+    if (!user) {
+        throw new apiError(400, "User does not exist.")
+    }
+
+    // check password
+    if (!password) {
+        throw new apiError(400, "Password is required.")
+    }
+
+    const passwordCheck = await user.isPasswordCorrect(password)
+
+    if (!passwordCheck) {
+        throw new apiError(400, "Incorrect password.")
+    }
+
+    // generate access token
+    const accessToken = await generateToken(user._id)
+
+    // information about user to be send to frontend
+    const loggedInUser = await User.findById(user._id).select("-password")
+
+    // cookies
+    const options = {
+        httpOnly : true,
+        secure : true
+    }
+
+    // sending response 
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .json(
+        new apiResponse(
+            200,{
+                loggedInUser
+            },
+            "User logged In Successfully."
+        )
+    )
+
+    
+})
+
+
+
+
+
+// log out user
+const logOutUser = asyncHandler( async (req, res) => {
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                accessToken : undefined
+            }
+        }
+    )
+
+    const options = {
+        httpOnly : true,
+        secure : true
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .json(
+        new apiResponse(
+            200,
+            {},
+            "User logged out successfully."
+        )
+    )
+
+})
+
+
+
+
+export {registerUser, loginUser, logOutUser}

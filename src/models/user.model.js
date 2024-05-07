@@ -40,9 +40,9 @@ const userSchema = new Schema(
             type: String,
             required: [true, "Password is required."]
         },
-        refreshToken: {
-            type: String
-        }
+        // refreshToken: {
+        //     type: String
+        // }
     },
     {timestamps: true}
 )
@@ -89,3 +89,4 @@ userSchema.methods.generateRefreshToken = function() {
 }
 
 export const User = mongoose.model("User", userSchema)
+// export {isPasswordCorrect, generateAccessToken, generateRefreshToken}
