@@ -3,14 +3,28 @@ import { User } from "../models/user.model.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { apiError } from "../utils/apiError.js";
+import jwt from "jsonwebtoken"
 
 
 
 // generate token
 const generateToken = async (userId) => {
     try {
-        const user = await User.findById(userId)
-        const accessToken = generateAccessToken()
+        const user = await User.findById(userId);
+        console.log(user)
+        console.log(userId);
+        const accessToken = jwt.sign(
+                {
+                    _id: user._id,
+                    email: user.email,
+                    username: user.username
+                },
+                process.env.ACCESS_TOKEN_SECRET,
+                {
+                    expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+                }
+            )
+        console.log(accessToken);
 
         return accessToken
 
@@ -43,7 +57,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     // check for files
-    console.log(req.files)
+    // console.log(req.files)
     const avatarLocalPath = req.files?.avatar[0]?.path;
     // const coverImageLocalPath = req.files?.coverImage[0]?.path;
     let coverImageLocalPath;
@@ -96,17 +110,25 @@ const registerUser = asyncHandler( async (req, res) => {
 // user login
 const loginUser = asyncHandler( async (req, res) => {
 
+    // console.log(req.body)
+
     // get user details form frontend / postman
     const {username, email, password} = req.body
+    // console.log(username, email);
 
-    if (!username || !email) {
+    if (!(username || email)) {
         throw new apiError(400, "All fields are required.")
     }
 
+
     // find user with provided email or uasername
+    // console.log(username, email)
     const user = await User.findOne({
-            $or: [{username}, {email}]
+        $or: [{username}, {email}]
+            // username: username,
+            // email: email
     })
+    // console.log(user);
 
     if (!user) {
         throw new apiError(400, "User does not exist.")
@@ -117,12 +139,17 @@ const loginUser = asyncHandler( async (req, res) => {
         throw new apiError(400, "Password is required.")
     }
 
-    const passwordCheck = await user.isPasswordCorrect(password)
+
+    const passwordCheck = await async function (password) {
+        bcrypt.compare(password, this.password)
+    }
+    // console.log(password);
 
     if (!passwordCheck) {
         throw new apiError(400, "Incorrect password.")
     }
 
+    console.log(user);
     // generate access token
     const accessToken = await generateToken(user._id)
 
