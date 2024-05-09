@@ -214,4 +214,54 @@ const logOutUser = asyncHandler( async (req, res) => {
 
 
 
-export {registerUser, loginUser, logOutUser}
+
+// change user current password
+const changeCurrentPassword = asyncHandler( async (req, res) => {
+    // req data from frontend / postman
+    const {oldPassword, newPassword, confirmPassword} = req.body
+
+    if (!(oldPassword || newPassword || confirmPassword)) {
+        throw new apiError(400, "All fields are required.")
+    }
+
+    if (!(newPassword === confirmPassword)) {
+        throw new apiError(400, "New Password and Confirm Password are not same.")
+    }
+
+    const user = await User.findById(req.user?._id)
+
+    const passwordCheck = await async function (oldPassword) {
+        bcrypt.compare(oldPassword, user.password)
+    }
+    // console.log(oldPassword);
+
+    if (!passwordCheck) {
+        throw new apiError(400, "Incorrect old password.")
+    }
+
+    user.password = newPassword;
+    await user.save({validateBoforeSave: false})
+
+    return res
+    .status(200)
+    .json(
+        200,
+        {},
+        "Password changed."
+    )
+
+})
+
+
+
+
+
+// update user details
+const updateUserDetails = asyncHandler(async (req, res) => {
+    const {fullname, avatar} = req.body
+
+    
+})
+
+
+export {registerUser, loginUser, logOutUser, changeCurrentPassword}
