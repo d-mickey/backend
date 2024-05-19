@@ -12,5 +12,6 @@ const storage = multer.diskStorage({
       cb(null, file.originalname)
     }
   }) // returm file path
+  // console.log(storage);
   
   export const upload = multer({ storage }) // storage is localFilePath

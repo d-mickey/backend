@@ -141,16 +141,18 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
 
-    const passwordCheck = await async function (password) {
-        bcrypt.compare(password, this.password)
-    }
-    // console.log(password);
+    // const passwordCheck = async function (password) {
+    //     return await bcrypt.compare(password, user.password)
+    // }
+    console.log(user.password);
+
+    const passwordCheck = await user.isPasswordCorrect(password);
 
     if (!passwordCheck) {
         throw new apiError(400, "Incorrect password.")
     }
 
-    console.log(user);
+    // console.log(user);
     // generate access token
     const accessToken = await generateToken(user._id)
 
@@ -194,6 +196,8 @@ const logOutUser = asyncHandler( async (req, res) => {
         }
     )
 
+    console.log(req.user.username);
+
     const options = {
         httpOnly : true,
         secure : true
@@ -221,8 +225,14 @@ const changeCurrentPassword = asyncHandler( async (req, res) => {
     // req data from frontend / postman
     const {oldPassword, newPassword, confirmPassword} = req.body
 
-    if (!(oldPassword || newPassword || confirmPassword)) {
-        throw new apiError(400, "All fields are required.")
+    if (!oldPassword) {
+        throw new apiError(400, "Old password required.")
+    }
+    if (!newPassword) {
+        throw new apiError(400, "New password required.")
+    }
+    if (!confirmPassword) {
+        throw new apiError(400, "Confirm password required.")
     }
 
     if (!(newPassword === confirmPassword)) {
@@ -230,11 +240,13 @@ const changeCurrentPassword = asyncHandler( async (req, res) => {
     }
 
     const user = await User.findById(req.user?._id)
+    // console.log(req.user.username);
 
-    const passwordCheck = await async function (oldPassword) {
-        bcrypt.compare(oldPassword, user.password)
-    }
+    // const passwordCheck = await async function (oldPassword) {
+    //     bcrypt.compare(oldPassword, user.password)
+    // }
     // console.log(oldPassword);
+    const passwordCheck = await user.isPasswordCorrect(oldPassword); 
 
     if (!passwordCheck) {
         throw new apiError(400, "Incorrect old password.")
@@ -280,7 +292,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
     .status(200)
     .json( new apiResponse(
         200,
-        {},
+        { user },
         "All details updated."
     ))
 })
@@ -290,7 +302,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 
 // update user avatar
 const updateAvatar = asyncHandler( async (req, res) => {
-    const avatarLocalPath = req.files?.avatar[0]?.path;
+    const avatarLocalPath = req.file.path;
     // const coverImageLocalPath = req.files?.coverImage[0]?.path;
     // let coverImageLocalPath;
     // if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 1) {
@@ -340,11 +352,11 @@ const updateAvatar = asyncHandler( async (req, res) => {
 // update user avatar
 const updateCoverImage = asyncHandler( async (req, res) => {
     // const avatarLocalPath = req.files?.avatar[0]?.path;
-    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
-    let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 1) {
-        req.files.coverImage.path = coverImageLocalPath;
-    }
+    const coverImageLocalPath = req.file.path;
+    // let coverImageLocalPath;
+    // if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 1) {
+    //     req.files.coverImage.path = coverImageLocalPath;
+    // }
 
     // if (!avatarLocalPath) {
     //     throw new apiError(400, "Avatar is missing.")
@@ -353,10 +365,15 @@ const updateCoverImage = asyncHandler( async (req, res) => {
     if (!coverImageLocalPath) {
         throw new apiError(400, "Cover Image is missing.")
     }
+    // console.log(coverImageLocalPath);
 
     // upload files to cloudinary
     // const avatar = await uploadOnCloudinary(avatarLocalPath)
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if (!coverImage.url) {
+        throw new apiError(400, "Error while uploading cover image.")
+    }
 
     // if (!avatar.url) {
     //     throw new apiError(400, "Error while uploading avatar.")
@@ -372,6 +389,7 @@ const updateCoverImage = asyncHandler( async (req, res) => {
         },
         { new : true }
     ).select("-password")
+    // console.log(coverImage.url);
 
     return res
     .status(200)
