@@ -288,26 +288,26 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 
 
 
-// update user files
-const updateUserFiles = asyncHandler( async (req, res) => {
+// update user avatar
+const updateAvatar = asyncHandler( async (req, res) => {
     const avatarLocalPath = req.files?.avatar[0]?.path;
     // const coverImageLocalPath = req.files?.coverImage[0]?.path;
-    let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 1) {
-        req.files.coverImage.path = coverImageLocalPath;
-    }
+    // let coverImageLocalPath;
+    // if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 1) {
+    //     req.files.coverImage.path = coverImageLocalPath;
+    // }
 
     if (!avatarLocalPath) {
         throw new apiError(400, "Avatar is missing.")
     }
 
-    if (!coverImageLocalPath) {
-        throw new apiError(400, "Cover Image is missing.")
-    }
+    // if (!coverImageLocalPath) {
+    //     throw new apiError(400, "Cover Image is missing.")
+    // }
 
     // upload files to cloudinary
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    // const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
     if (!avatar.url) {
         throw new apiError(400, "Error while uploading avatar.")
@@ -318,6 +318,55 @@ const updateUserFiles = asyncHandler( async (req, res) => {
         {
             $set: {
                 avatar : avatar.url,
+                // coverImage : coverImage.url
+            },
+        },
+        { new : true }
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json( new apiResponse(
+        200,
+        {},
+        "All files are updated."
+    ))
+})
+
+
+
+
+
+// update user avatar
+const updateCoverImage = asyncHandler( async (req, res) => {
+    // const avatarLocalPath = req.files?.avatar[0]?.path;
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 1) {
+        req.files.coverImage.path = coverImageLocalPath;
+    }
+
+    // if (!avatarLocalPath) {
+    //     throw new apiError(400, "Avatar is missing.")
+    // }
+
+    if (!coverImageLocalPath) {
+        throw new apiError(400, "Cover Image is missing.")
+    }
+
+    // upload files to cloudinary
+    // const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    // if (!avatar.url) {
+    //     throw new apiError(400, "Error while uploading avatar.")
+    // }
+
+    const user = User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                // avatar : avatar.url,
                 coverImage : coverImage.url
             },
         },
@@ -475,7 +524,8 @@ export {registerUser,
     logOutUser, 
     changeCurrentPassword,
     updateUserDetails,
-    updateUserFiles,
+    updateAvatar,
+    updateCoverImage,
     getUserChannelProfile,
     getWatchHistory
 }
